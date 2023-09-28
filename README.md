@@ -99,7 +99,7 @@ run container:
 
 &nbsp;
 
-### Docker TK app
+### Python TK app
 
 You will not be able to get an X11-based docker container to display on a non-X11 display. If you want this docker container to be able to open windows to your display, you'll need to be running X11. There are server implementations for both Windows and OSX.
 
@@ -107,4 +107,35 @@ There is no universal display protocol where a server can send information to an
 
 &nbsp;
 ## R
-to be completed 
+For the R ecosystem the Rocker project has a list of previous R versions packed up into docker images:
+https://hub.docker.com/layers/rocker/r-ver/4.2.2/images/sha256-6d025464b936c92b0e159a847b153464aac90ce13dd7cfe91073ebaa7babfb04?context=explore
+
+
+## 03 minimal R 
+Very similar setup to 01_python... from above. Just used a rocker base image and another entrypoint (Rscript in linux).
+
+```docker
+C:\dev\devops\test_docker\03-docker_minimal>docker build -t 03-docker_r_minimal .
+[+] Building 11.8s (8/8) FINISHED
+ => [internal] load build definition from Dockerfile                                                                                                                       0.0s
+ => => transferring dockerfile: 123B                                                                                                                                       0.0s
+ => [internal] load .dockerignore                                                                                                                                          0.0s
+ => => transferring context: 2B                                                                                                                                            0.0s
+ => [internal] load metadata for docker.io/rocker/r-ver:4.2.2                                                                                                             11.5s
+ => [internal] load build context                                                                                                                                          0.0s
+ => => transferring context: 175B                                                                                                                                          0.0s
+ => [1/3] FROM docker.io/rocker/r-ver:4.2.2@sha256:39696cf75761315d12d969643a7cc6e4430273b4f4f1044b04dc52a20956244c                                                        0.0s
+ => CACHED [2/3] WORKDIR /app                                                                                                                                              0.0s
+ => [3/3] COPY . .                                                                                                                                                         0.0s
+ => exporting to image                                                                                                                                                     0.1s
+ => => exporting layers                                                                                                                                                    0.0s
+ => => writing image sha256:bc54259ca6f22a41575ee0ddeca5017eccfcfe502bfa8ad0cd7ebdd2647130a6                                                                               0.0s
+ => => naming to docker.io/library/03-docker_r_minimal                                                                                                                     0.0s
+
+Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them
+
+C:\dev\devops\test_docker\03-docker_minimal>docker run 03-docker_r_minimal
+[1] "R says hello from within my docker world!"
+```
+
+## 04 R project with RENV requirements
