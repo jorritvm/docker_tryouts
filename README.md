@@ -139,3 +139,50 @@ C:\dev\devops\test_docker\03-docker_minimal>docker run 03-docker_r_minimal
 ```
 
 ## 04 R project with RENV requirements
+This time we have a minimalistic R project with RENV setup (only data.table is tracked by renv) in our windows dev environment and we want to dockerize it.
+
+The docker file has some specific sections for this:
+```
+COPY ./src/renv.lock .
+
+RUN mkdir -p renv
+COPY ./src/.Rprofile .Rprofile
+COPY ./src/renv/activate.R renv/activate.R
+#COPY ./src/renv/settings.json renv/settings.json # not needed
+RUN R -e "renv::restore()"
+```
+
+Note that simply setting the RENV_LIBRARIES_PATH did not work in my case. RENV did not restore to the proper folder.
+
+The build caches the RENV as long as the renv.lock sha does not change. However, if it does, it restores the ENTIRE RENV which can be painfully slow.
+
+```docker
+C:\dev\devops\test_docker\04_r_renv>docker build -t 04_r_renv .
+[+] Building 1.0s (14/14) FINISHED
+ => [internal] load build definition from Dockerfile                                                                                                                       0.0s
+ => => transferring dockerfile: 446B                                                                                                                                       0.0s
+ => [internal] load .dockerignore                                                                                                                                          0.0s
+ => => transferring context: 2B                                                                                                                                            0.0s
+ => [internal] load metadata for docker.io/rocker/r-ver:4.2.2                                                                                                              0.6s
+ => [1/9] FROM docker.io/rocker/r-ver:4.2.2@sha256:39696cf75761315d12d969643a7cc6e4430273b4f4f1044b04dc52a20956244c                                                        0.0s
+ => [internal] load build context                                                                                                                                          0.1s
+ => => transferring context: 2.27MB                                                                                                                                        0.1s
+ => CACHED [2/9] RUN R -e "install.packages('renv', repos = c(CRAN = 'https://cloud.r-project.org'))"                                                                      0.0s
+ => CACHED [3/9] WORKDIR /app                                                                                                                                              0.0s
+ => CACHED [4/9] COPY ./src/renv.lock .                                                                                                                                    0.0s
+ => CACHED [5/9] RUN mkdir -p renv                                                                                                                                         0.0s
+ => CACHED [6/9] COPY ./src/.Rprofile .Rprofile                                                                                                                            0.0s
+ => CACHED [7/9] COPY ./src/renv/activate.R renv/activate.R                                                                                                                0.0s
+ => CACHED [8/9] RUN R -e "renv::restore()"                                                                                                                                0.0s
+ => [9/9] COPY ./src/* .                                                                                                                                                   0.1s
+ => exporting to image                                                                                                                                                     0.1s
+ => => exporting layers                                                                                                                                                    0.1s
+ => => writing image sha256:541aa865f92cc6e80e5269d9aaf33aeb18104fca7b977bc891610a31e53ef762                                                                               0.0s
+ => => naming to docker.io/library/04_r_renv                                                                                                                               0.0s
+
+Use 'docker scan' to run Snyk tests against images to find vulnerabilities and learn how to fix them
+
+C:\dev\devops\test_docker\04_r_renv>docker run 04_r_renv
+[1] "I did some data.table stuff and am now showing the lowest mpg car:"
+[1] "Cadillac Fleetwood"
+```
