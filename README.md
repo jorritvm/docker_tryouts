@@ -1,10 +1,30 @@
-# docker_tryouts
+# docker tests
  Testing docker with python and R
 
+- [docker tests](#docker-tests)
+  - [Introduction](#introduction)
+  - [Python](#python)
+    - [01. python command line application](#01-python-command-line-application)
+    - [02. python flask application with requirements](#02-python-flask-application-with-requirements)
+    - [Python TK app](#python-tk-app)
+  - [R](#r)
+    - [03 minimal R](#03-minimal-r)
+    - [04 R project with RENV requirements](#04-r-project-with-renv-requirements)
+    - [05 simple shiny app](#05-simple-shiny-app)
+    - [R docker Learnings](#r-docker-learnings)
+
+
 &nbsp;
-## Pre-reading
+## Introduction
 General docker intro:
 - https://docs.docker.com/get-started/
+
+Good practice: 
+- Build the image layer by layer
+- Run a removable container and terminal into that after each build step
+  ```docker
+  docker container run --rm -it image_name /bin/bash
+  ```
 
 &nbsp;
 ## Python
@@ -107,11 +127,18 @@ There is no universal display protocol where a server can send information to an
 
 &nbsp;
 ## R
-For the R ecosystem the Rocker project has a list of previous R versions packed up into docker images:
+For the R ecosystem the Rocker project has 2 streams of images (https://rocker-project.org/images/).
+* the versioned stack: built on debian stable or ubuntu LTS, meant to provide stability
+* the base stack: meant to provide the latest version of libraries and compilers
+
+**A big difference between these two is that r-base is shipped with the littler command line tool (https://github.com/eddelbuettel/littler?ref=hosting.analythium.io) while r-ver is not! As such, any example dockerfiles using 'install.r', 'r -e', 'update.r', ... have to be modified to use Rscript calls instead.**
+
+For my purposes, to be in line with the R install on my windows system, I am testing with the r-ver:4.2.2 image from the versioned stack: 
 https://hub.docker.com/layers/rocker/r-ver/4.2.2/images/sha256-6d025464b936c92b0e159a847b153464aac90ce13dd7cfe91073ebaa7babfb04?context=explore
 
 
-## 03 minimal R 
+
+### 03 minimal R 
 Very similar setup to 01_python... from above. Just used a rocker base image and another entrypoint (Rscript in linux).
 
 ```docker
@@ -138,8 +165,8 @@ C:\dev\devops\test_docker\03-docker_minimal>docker run 03-docker_r_minimal
 [1] "R says hello from within my docker world!"
 ```
 
-## 04 R project with RENV requirements
-This time we have a minimalistic R project with RENV setup (only data.table is tracked by renv) in our windows dev environment and we want to dockerize it.
+### 04 R project with RENV requirements
+This time I have a minimalistic R project with RENV setup (only data.table is tracked by renv) in my windows dev environment and I want to dockerize it.
 
 The docker file has some specific sections for this:
 ```
@@ -186,3 +213,39 @@ C:\dev\devops\test_docker\04_r_renv>docker run 04_r_renv
 [1] "I did some data.table stuff and am now showing the lowest mpg car:"
 [1] "Cadillac Fleetwood"
 ```
+
+### 05 simple shiny app
+This guy Peter did a good job writing step by step tutorials on how to dockerize shiny apps. 
+* Summary post on medium: https://medium.com/analythium/how-do-you-dockerize-a-shiny-app-1e7ae1c5dfa6
+* Docker basics: https://hosting.analythium.io/docker-basics-for-data-apps/
+* Dockerizing shiny apps: https://hosting.analythium.io/dockerizing-shiny-applications/
+
+In this docker test I have taken his sample R project and modified it to my own needs:
+- I ran this app locally on my dev machine using R 4.2.2 and latest libraries
+- I created an RENV and snapshot file
+- I modified the dockerfile to:
+  - use r-ver:4.2.2 instead of r-base
+  - install packages using RENV instead of littler (see example 04)
+  - run shiny with host and port set in R command instead of in shiny server config file
+
+```bash
+build with:
+docker build -t 05_shiny_simple .
+
+run with:
+docker container run -p 12345:3838 --name 05_shiny_simple -d 05_shiny_simple
+```
+* -d for detached
+* -p for port forwarding
+* --name for tagging
+* browse to [localhost:12345](http://localhost:12345/) to test the app
+
+Learnings:
+- If you want to run apps as a non-root user you have to make sure the RENV cache does not reside in the root home directory!
+- You need to set a host to 0.0.0.0, if a server binds to 127.0.0.1 it is not accessible from other networks!
+
+### R docker Learnings
+- The reproducibility using docker is great.
+- The renv::restore() step takes up most of the time in the build process. If snapshots change frequently this is going to slow down builds a lot.
+- The images are huge, my test app locally is 65MB, my corresponding image is >1GB.
+
